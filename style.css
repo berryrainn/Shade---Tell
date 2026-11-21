@@ -22,6 +22,7 @@ body {
   background-color: var(--surface-canvas);
   color: var(--berry-dark);
   min-height: 100vh;
+  position: relative;
 }
 
 /* Top Header */
@@ -494,15 +495,13 @@ body {
 
 .footer a { color: var(--text-muted); }
 
-/* Tutorial Overlay & Spotlight */
+/* Tutorial Overlay & Document-Anchored Speech Bubble */
 .tutorial-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(20, 12, 15, 0.58);
-  display: grid;
-  place-items: center;
+  background: rgba(20, 12, 15, 0.52);
   z-index: 50;
-  padding: 20px;
+  pointer-events: auto;
 }
 
 .tutorial-backdrop[hidden] { display: none; }
@@ -514,29 +513,78 @@ body {
   border-radius: 16px;
 }
 
+/* position: absolute anchors the bubble to the page so it never drifts when scrolling */
 .tutorial-card {
+  position: absolute;
   background: #FFF2F5;
   color: var(--berry-dark);
-  width: 100%;
-  max-width: 380px;
-  border-radius: 18px;
-  padding: 22px 24px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+  width: 300px;
+  max-width: calc(100vw - 32px);
+  border-radius: 14px;
+  padding: 15px 18px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--berry-border);
   z-index: 70;
+}
+
+.tutorial-card::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #FFF2F5;
+  border-left: 1px solid var(--berry-border);
+  border-top: 1px solid var(--berry-border);
+  display: none;
+}
+
+.tutorial-card.arrow-left::after {
+  display: block;
+  left: -7px;
+  top: 24px;
+  transform: rotate(-45deg);
+}
+
+.tutorial-card.arrow-right::after {
+  display: block;
+  right: -7px;
+  top: 24px;
+  transform: rotate(135deg);
+}
+
+.tutorial-card.step-5-arrow::after {
+  display: block;
+  right: -7px;
+  top: auto;
+  bottom: 26px;
+  transform: rotate(135deg);
+}
+
+.tutorial-card.arrow-top::after {
+  display: block;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.tutorial-card.arrow-bottom::after {
+  display: block;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%) rotate(225deg);
 }
 
 .tutorial-top {
   display: flex;
   justify-content: space-between;
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
   color: var(--text-muted);
-  margin-bottom: 10px;
+  margin-bottom: 5px;
 }
 
-.tutorial-title { font-size: 1.05rem; margin-bottom: 6px; }
-.tutorial-desc { font-size: 0.88rem; line-height: 1.48; color: #5B2B3A; margin-bottom: 18px; }
+.tutorial-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; }
+.tutorial-desc { font-size: 0.81rem; line-height: 1.4; color: #5B2B3A; margin-bottom: 12px; }
 
 .tutorial-actions {
   display: flex;
@@ -550,7 +598,7 @@ body {
   border: none;
   color: var(--text-muted);
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.73rem;
   cursor: pointer;
 }
 
@@ -559,9 +607,9 @@ body {
   color: var(--berry-dark);
   border: 1px solid var(--berry-border);
   border-radius: 999px;
-  padding: 7px 16px;
+  padding: 5px 14px;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.73rem;
   cursor: pointer;
 }
 
