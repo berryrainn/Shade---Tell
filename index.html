@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shade &amp; Tell: Color Palette &amp; Contrast Checker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Top Header -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-dots" aria-hidden="true">
+        <span class="dot dot-dark"></span>
+        <span class="dot dot-light"></span>
+      </span>
+      <span class="brand-name">Shade &amp; Tell: Color Palette &amp; Contrast Checker</span>
+    </div>
+    <div class="header-actions">
+      <button id="replayTutorialBtn" class="ghost-btn" type="button">Tutorial</button>
+      <span class="workspace-label">Your color workspace</span>
+      <div class="avatar" title="Rainn Jewel S. Castillo">RC</div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="container">
+    <section class="hero">
+      <h1>A little color. A lot of clarity.</h1>
+      <p>Find your perfect pairing. Make every word accessible.</p>
+    </section>
+
+    <section class="workspace-grid">
+      <!-- Left Card: Define Your Colors -->
+      <article class="card" id="card-colors">
+        <div class="card-header">
+          <h2>Define Your Colors</h2>
+          <button id="swapBtn" class="text-btn" type="button" title="Swap background and text colors">&#8644; Swap</button>
+        </div>
+
+        <!-- Background Color Input -->
+        <div class="color-row" data-target="bg">
+          <input type="color" id="bgPicker" value="#FFF0F3" aria-label="Background color picker" />
+          <div class="input-group">
+            <label for="bgHex">Background Color</label>
+            <div class="hex-box">
+              <input type="text" id="bgHex" value="#FFF0F3" maxlength="7" spellcheck="false" />
+              <span class="edit-icon" aria-hidden="true">&#9998;</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Text Color Input -->
+        <div class="color-row" data-target="text">
+          <input type="color" id="textPicker" value="#4A1525" aria-label="Text color picker" />
+          <div class="input-group">
+            <label for="textHex">Text Color</label>
+            <div class="hex-box">
+              <input type="text" id="textHex" value="#4A1525" maxlength="7" spellcheck="false" />
+              <span class="edit-icon" aria-hidden="true">&#9998;</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fine-Tune Your Color (Wheel + HSB Sliders + RGB) -->
+        <div class="fine-tune" id="fineTuneSection">
+          <div class="fine-tune-header">
+            <span>Fine-tune your color</span>
+            <button type="button" id="activeTargetBtn" class="target-status" data-active-target="text">
+              Text color selected
+            </button>
+          </div>
+
+          <div class="fine-tune-body">
+            <!-- Interactive Color Wheel & Saturation/Brightness Square -->
+            <div class="wheel-wrapper">
+              <canvas id="colorWheelCanvas" width="164" height="164" aria-label="Interactive HSB color wheel"></canvas>
+            </div>
+
+            <!-- Sliders & RGB Readout -->
+            <div class="sliders-wrapper">
+              <div class="format-row">
+                <span class="format-tag">HEX &#9662;</span>
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-label">
+                  <span>Hue</span>
+                  <span id="hueVal">342°</span>
+                </div>
+                <input type="range" id="hueSlider" min="0" max="360" value="342" class="slider hue-track" />
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-label">
+                  <span>Saturation</span>
+                  <span id="satVal">72%</span>
+                </div>
+                <input type="range" id="satSlider" min="0" max="100" value="72" class="slider" />
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-label">
+                  <span>Brightness</span>
+                  <span id="briVal">29%</span>
+                </div>
+                <input type="range" id="briSlider" min="0" max="100" value="29" class="slider" />
+              </div>
+
+              <div class="rgb-readout">
+                <div><span>R</span><strong id="rVal">74</strong></div>
+                <div><span>G</span><strong id="gVal">21</strong></div>
+                <div><span>B</span><strong id="bVal">37</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Saved Colors -->
+        <div class="saved-section">
+          <div class="saved-header">
+            <span>Saved colors</span>
+            <span id="savedCount">7 colors</span>
+          </div>
+          <div class="saved-swatches" id="savedSwatches">
+            <button type="button" class="swatch-dot" style="background:#FFF0F3" data-color="#FFF0F3" title="#FFF0F3"></button>
+            <button type="button" class="swatch-dot active" style="background:#4A1525" data-color="#4A1525" title="#4A1525"></button>
+            <button type="button" class="swatch-dot" style="background:#A33B5C" data-color="#A33B5C" title="#A33B5C"></button>
+            <button type="button" class="swatch-dot" style="background:#E598AD" data-color="#E598AD" title="#E598AD"></button>
+            <button type="button" class="swatch-dot" style="background:#F3E5D8" data-color="#F3E5D8" title="#F3E5D8"></button>
+            <button type="button" class="swatch-dot" style="background:#D4DFD0" data-color="#D4DFD0" title="#D4DFD0"></button>
+            <button type="button" class="swatch-dot" style="background:#DCD8EC" data-color="#DCD8EC" title="#DCD8EC"></button>
+            <button type="button" id="addSwatchBtn" class="swatch-add" title="Save current color">+</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- Right Card: Analysis -->
+      <article class="card" id="card-analysis">
+        <div class="card-header">
+          <h2>Analysis</h2>
+          <span class="live-indicator"><span class="live-dot"></span> Live preview</span>
+        </div>
+
+        <!-- Contrast Ratio Ring & Badges -->
+        <div class="score-wrapper" id="scoreSection">
+          <div class="score-ring" id="scoreRing">
+            <span class="score-number" id="contrastRatio">12.4:1</span>
+            <span class="score-caption">CONTRAST RATIO</span>
+          </div>
+          <p class="wcag-headline" id="wcagHeadline">WCAG AA/AAA Pass</p>
+          <div class="wcag-badges">
+            <span class="badge pass" id="badgeAA">AA &#10003;</span>
+            <span class="badge pass" id="badgeAAA">AAA &#10003;</span>
+          </div>
+        </div>
+
+        <!-- Live Typography Preview -->
+        <div class="preview-section" id="previewSection">
+          <div class="preview-meta">
+            <span>Typography preview</span>
+            <span id="previewTag">Berry on cream</span>
+          </div>
+          <div class="preview-box" id="previewBox" style="background-color: #FFF0F3; color: #4A1525;">
+            <h3>Aa Large Heading</h3>
+            <p class="subheading">Subheading</p>
+            <p class="body-copy">
+              Beautiful design should be easy to read. This color pairing keeps your content clear, comfortable, and accessible to everyone.
+            </p>
+          </div>
+        </div>
+
+        <!-- Copy CSS Variables Button -->
+        <div class="export-section" id="exportSection">
+          <button id="copyCssBtn" class="primary-btn" type="button">
+            &#128203; Copy CSS Variables
+          </button>
+          <p class="helper-note" id="copyHint">Two colors. Ready for your next great idea.</p>
+        </div>
+      </article>
+    </section>
+
+    <!-- Bottom Card: Color Palette Suggestions -->
+    <section class="card suggestions-card" id="card-suggestions">
+      <div class="suggestions-info">
+        <h2>&#10022; Color Palette Suggestions</h2>
+        <p>A few more colors that feel right together.</p>
+      </div>
+      <div class="suggestions-list">
+        <button type="button" class="suggestion-item" data-bg="#FFF0F3" data-text="#4A1525">
+          <span class="suggestion-chip" style="background:#FFF0F3"></span>
+          <span><strong>#FFF0F3</strong><small>Soft cream</small></span>
+        </button>
+        <button type="button" class="suggestion-item" data-bg="#4A1525" data-text="#FFF0F3">
+          <span class="suggestion-chip" style="background:#4A1525"></span>
+          <span><strong>#4A1525</strong><small>Deep berry</small></span>
+        </button>
+        <button type="button" class="suggestion-item" data-bg="#FFF0F3" data-text="#C6859F">
+          <span class="suggestion-chip" style="background:#C6859F"></span>
+          <span><strong>#C6859F</strong><small>Dusty rose</small></span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span>Made for beautiful, readable experiences.</span>
+      <a href="https://www.w3.org/WAI/WCAG22/quickref/" target="_blank" rel="noreferrer">WCAG 2.2 guidelines</a>
+    </footer>
+  </main>
+
+  <!-- 5-Step Interactive Walkthrough Overlay -->
+  <div class="tutorial-backdrop" id="tutorialBackdrop" hidden>
+    <div class="tutorial-card" id="tutorialCard" role="dialog" aria-modal="true">
+      <div class="tutorial-top">
+        <span class="tutorial-step" id="tutStepLabel">STEP 1</span>
+        <span class="tutorial-count" id="tutCountLabel">1 out of 5</span>
+      </div>
+      <h3 class="tutorial-title" id="tutTitle">Pick Your Colors</h3>
+      <p class="tutorial-desc" id="tutDesc">
+        Type hex codes (#FFF0F3 and #4A1525) or use the color wheel and sliders to set your background and text colors.
+      </p>
+      <div class="tutorial-actions">
+        <button type="button" class="tut-skip" id="tutSkipBtn">SKIP</button>
+        <button type="button" class="tut-next" id="tutNextBtn">NEXT &gt;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast" role="status" aria-live="polite">Copied to Clipboard!</div>
+
+  <script src="script.js"></script>
+</body>
+</html>
