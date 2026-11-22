@@ -17,3 +17,8 @@ A lightweight web application built with HTML5, CSS3, and JavaScript that evalua
 ## Workflow
 1. Designed wireframes, storyboard, and tutorial mockups in Figma (`design/`).
 2. Developed and tested features on the `beta` branch before merging into `main`.
+
+## QA Software Testing & Documentation
+Comprehensive manual QA testing covering 23 test cases across 5 test scenarios (color normalization, HSB/RGB fine-tuning, WCAG 2.2 / ISO 40500 contrast validation, swatch management & dynamic suggestions, CSS export, and the 5-step walkthrough).
+
+- 📂 **[QA Test Cases, Execution Logs & Evidence (Google Drive)](https://drive.google.com/drive/folders/1QSQBLa6HS1Al6uuOBEzhwK0jhQMp97J_?usp=sharing)**
