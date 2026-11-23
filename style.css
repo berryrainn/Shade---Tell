@@ -297,7 +297,7 @@ body {
 
 .rgb-readout span { color: var(--text-muted); }
 
-/* Saved Swatches */
+/* Saved Swatches & Delete Icon */
 .saved-section { margin-top: 18px; }
 
 .saved-header {
@@ -311,8 +311,15 @@ body {
 .saved-swatches {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
+}
+
+.swatch-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .swatch-dot,
@@ -327,6 +334,34 @@ body {
 .swatch-dot.active {
   outline: 2px solid var(--berry-dark);
   outline-offset: 2px;
+}
+
+.swatch-delete {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1px solid #FFFFFF;
+  background: var(--berry-dark);
+  color: #FFFFFF;
+  font-size: 10px;
+  line-height: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.swatch-item:hover .swatch-delete,
+.swatch-item:focus-within .swatch-delete {
+  display: flex;
+}
+
+.swatch-delete:hover {
+  background: var(--fail-text);
 }
 
 .swatch-add {
@@ -459,7 +494,7 @@ body {
 .suggestions-info h2 { font-size: 0.98rem; margin-bottom: 4px; }
 .suggestions-info p { font-size: 0.82rem; color: var(--text-muted); }
 
-.suggestions-list { display: flex; gap: 16px; flex-wrap: wrap; }
+.suggestions-list { display: flex; gap: 14px; flex-wrap: wrap; }
 
 .suggestion-item {
   display: flex;
@@ -472,6 +507,12 @@ body {
   cursor: pointer;
   text-align: left;
   color: var(--berry-dark);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.suggestion-item:hover {
+  border-color: var(--berry-dark);
+  transform: translateY(-1px);
 }
 
 .suggestion-chip {
@@ -479,6 +520,7 @@ body {
   height: 34px;
   border-radius: 8px;
   border: 1px solid rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
 }
 
 .suggestion-item strong { display: block; font-size: 0.82rem; }
@@ -495,7 +537,7 @@ body {
 
 .footer a { color: var(--text-muted); }
 
-/* Tutorial Overlay & Document-Anchored Speech Bubble */
+/* Tutorial Overlay & Speech Bubble */
 .tutorial-backdrop {
   position: fixed;
   inset: 0;
@@ -513,7 +555,6 @@ body {
   border-radius: 16px;
 }
 
-/* position: absolute anchors the bubble to the page so it never drifts when scrolling */
 .tutorial-card {
   position: absolute;
   background: #FFF2F5;
@@ -558,13 +599,6 @@ body {
   top: auto;
   bottom: 26px;
   transform: rotate(135deg);
-}
-
-.tutorial-card.arrow-top::after {
-  display: block;
-  top: -7px;
-  left: 50%;
-  transform: translateX(-50%) rotate(45deg);
 }
 
 .tutorial-card.arrow-bottom::after {

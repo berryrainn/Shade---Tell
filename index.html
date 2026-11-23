@@ -19,7 +19,7 @@
     <div class="header-actions">
       <button id="replayTutorialBtn" class="ghost-btn" type="button">Tutorial</button>
       <span class="workspace-label">Your color workspace</span>
-      <div class="avatar" title="Shade & Tell">S&T</div>
+      <div class="avatar" title="Shade & Tell">S&amp;T</div>
     </div>
   </header>
 
@@ -120,16 +120,12 @@
         <div class="saved-section">
           <div class="saved-header">
             <span>Saved colors</span>
-            <span id="savedCount">7 colors</span>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span id="savedCount">7 colors</span>
+              <button type="button" id="clearSwatchesBtn" class="text-btn" title="Remove all saved swatches">Clear all</button>
+            </div>
           </div>
           <div class="saved-swatches" id="savedSwatches">
-            <button type="button" class="swatch-dot" style="background:#FFF0F3" data-color="#FFF0F3" title="#FFF0F3"></button>
-            <button type="button" class="swatch-dot active" style="background:#4A1525" data-color="#4A1525" title="#4A1525"></button>
-            <button type="button" class="swatch-dot" style="background:#A33B5C" data-color="#A33B5C" title="#A33B5C"></button>
-            <button type="button" class="swatch-dot" style="background:#E598AD" data-color="#E598AD" title="#E598AD"></button>
-            <button type="button" class="swatch-dot" style="background:#F3E5D8" data-color="#F3E5D8" title="#F3E5D8"></button>
-            <button type="button" class="swatch-dot" style="background:#D4DFD0" data-color="#D4DFD0" title="#D4DFD0"></button>
-            <button type="button" class="swatch-dot" style="background:#DCD8EC" data-color="#DCD8EC" title="#DCD8EC"></button>
             <button type="button" id="addSwatchBtn" class="swatch-add" title="Save current color">+</button>
           </div>
         </div>
@@ -145,7 +141,7 @@
         <!-- Contrast Ratio Ring & Badges -->
         <div class="score-wrapper" id="scoreSection">
           <div class="score-ring" id="scoreRing">
-            <span class="score-number" id="contrastRatio">12.4:1</span>
+            <span class="score-number" id="contrastRatio">13.3:1</span>
             <span class="score-caption">CONTRAST RATIO</span>
           </div>
           <p class="wcag-headline" id="wcagHeadline">WCAG AA/AAA Pass</p>
@@ -186,20 +182,7 @@
         <h2>&#10022; Color Palette Suggestions</h2>
         <p>A few more colors that feel right together.</p>
       </div>
-      <div class="suggestions-list">
-        <button type="button" class="suggestion-item" data-bg="#FFF0F3" data-text="#4A1525">
-          <span class="suggestion-chip" style="background:#FFF0F3"></span>
-          <span><strong>#FFF0F3</strong><small>Soft cream</small></span>
-        </button>
-        <button type="button" class="suggestion-item" data-bg="#4A1525" data-text="#FFF0F3">
-          <span class="suggestion-chip" style="background:#4A1525"></span>
-          <span><strong>#4A1525</strong><small>Deep berry</small></span>
-        </button>
-        <button type="button" class="suggestion-item" data-bg="#FFF0F3" data-text="#C6859F">
-          <span class="suggestion-chip" style="background:#C6859F"></span>
-          <span><strong>#C6859F</strong><small>Dusty rose</small></span>
-        </button>
-      </div>
+      <div class="suggestions-list" id="suggestionsList"></div>
     </section>
 
     <!-- Footer -->

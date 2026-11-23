@@ -29,8 +29,11 @@ const toast = document.getElementById("toast");
 const savedSwatches = document.getElementById("savedSwatches");
 const savedCount = document.getElementById("savedCount");
 const addSwatchBtn = document.getElementById("addSwatchBtn");
+const clearSwatchesBtn = document.getElementById("clearSwatchesBtn");
+const suggestionsList = document.getElementById("suggestionsList") || document.querySelector(".suggestions-list");
 
-let activeTarget = "text"; // "bg" or "text"
+let activeTarget = "text"; 
+let manualHueOverride = null; 
 
 // --- Color Conversions ---
 function normalizeHex(value) {
@@ -40,12 +43,13 @@ function normalizeHex(value) {
 }
 
 function hexToRgb(hex) {
-  const num = parseInt(hex.slice(1), 16);
+  const clean = normalizeHex(hex) || "#000000";
+  const num = parseInt(clean.slice(1), 16);
   return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
 }
 
 function rgbToHex(r, g, b) {
-  return "#" + [r, g, b].map((n) => Math.round(n).toString(16).padStart(2, "0")).join("").toUpperCase();
+  return "#" + [r, g, b].map((n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0")).join("").toUpperCase();
 }
 
 function rgbToHsb(r, g, b) {
@@ -63,10 +67,17 @@ function rgbToHsb(r, g, b) {
 }
 
 function hsbToRgb(h, s, b) {
-  s /= 100; b /= 100;
+  h = h === 360 ? 360 : ((h % 360) + 360) % 360;
+  s = Math.max(0, Math.min(100, s)) / 100;
+  b = Math.max(0, Math.min(100, b)) / 100;
   const k = (n) => (n + h / 60) % 6;
   const f = (n) => b * (1 - s * Math.max(0, Math.min(k(n), 4 - k(n), 1)));
   return { r: Math.round(f(5) * 255), g: Math.round(f(3) * 255), b: Math.round(f(1) * 255) };
+}
+
+function hsbToHex(h, s, b) {
+  const { r, g, b: bl } = hsbToRgb(h, s, b);
+  return rgbToHex(r, g, bl);
 }
 
 // --- Render HSB Color Wheel + Inner Square ---
@@ -136,6 +147,7 @@ wheelCanvas.addEventListener("click", (e) => {
   if (dist >= innerR && dist <= outerR) {
     let angle = Math.round((Math.atan2(y, x) * 180) / Math.PI);
     if (angle < 0) angle += 360;
+    manualHueOverride = angle;
     hueSlider.value = angle;
     applySliderChange();
   }
@@ -156,17 +168,186 @@ function getContrastRatio(hex1, hex2) {
   return (Math.max(lum1, lum2) + 0.05) / (Math.min(lum1, lum2) + 0.05);
 }
 
+// --- Saved Swatches (With Individual Delete + Clear All) ---
+function updateSavedCount() {
+  const count = savedSwatches.querySelectorAll(".swatch-dot").length;
+  savedCount.textContent = `${count} ${count === 1 ? "color" : "colors"}`;
+}
+
+function createSwatchItem(hex, isActive = false) {
+  const cleanHex = hex.toUpperCase();
+  const wrapper = document.createElement("div");
+  wrapper.className = "swatch-item";
+
+  const dot = document.createElement("button");
+  dot.type = "button";
+  dot.className = `swatch-dot${isActive ? " active" : ""}`;
+  dot.style.background = cleanHex;
+  dot.dataset.color = cleanHex;
+  dot.title = cleanHex;
+
+  const delBtn = document.createElement("button");
+  delBtn.type = "button";
+  delBtn.className = "swatch-delete";
+  delBtn.title = `Delete ${cleanHex}`;
+  delBtn.setAttribute("aria-label", `Delete ${cleanHex}`);
+  delBtn.innerHTML = "&times;";
+
+  wrapper.appendChild(dot);
+  wrapper.appendChild(delBtn);
+  return wrapper;
+}
+
+function initDefaultSwatches() {
+  const defaults = [
+    { hex: "#FFF0F3", active: false },
+    { hex: "#4A1525", active: true },
+    { hex: "#A33B5C", active: false },
+    { hex: "#E598AD", active: false },
+    { hex: "#F3E5D8", active: false },
+    { hex: "#D4DFD0", active: false },
+    { hex: "#DCD8EC", active: false }
+  ];
+
+  savedSwatches.querySelectorAll(".swatch-item, .swatch-dot").forEach((el) => el.remove());
+  defaults.forEach(({ hex, active }) => {
+    savedSwatches.insertBefore(createSwatchItem(hex, active), addSwatchBtn);
+  });
+  updateSavedCount();
+}
+
+savedSwatches.addEventListener("click", (e) => {
+  const delBtn = e.target.closest(".swatch-delete");
+  if (delBtn) {
+    const item = delBtn.closest(".swatch-item");
+    if (item) item.remove();
+    updateSavedCount();
+    return;
+  }
+
+  const dot = e.target.closest(".swatch-dot");
+  if (!dot) return;
+  document.querySelectorAll(".swatch-dot").forEach((d) => d.classList.remove("active"));
+  dot.classList.add("active");
+  manualHueOverride = null;
+  if (activeTarget === "bg") bgPicker.value = dot.dataset.color;
+  else textPicker.value = dot.dataset.color;
+  updateAnalysis();
+});
+
+addSwatchBtn.addEventListener("click", () => {
+  const hex = (activeTarget === "bg" ? bgPicker.value : textPicker.value).toUpperCase();
+  savedSwatches.insertBefore(createSwatchItem(hex, false), addSwatchBtn);
+  updateSavedCount();
+});
+
+if (clearSwatchesBtn) {
+  clearSwatchesBtn.addEventListener("click", () => {
+    savedSwatches.querySelectorAll(".swatch-item, .swatch-dot").forEach((el) => el.remove());
+    updateSavedCount();
+  });
+}
+
+// --- Dynamic Color Palette Suggestions Based on User's Pick ---
+function getBestReadablePair(candidateHex, anchorHex, role) {
+  const bg = role === "bg" ? candidateHex : anchorHex;
+  const fg = role === "bg" ? anchorHex : candidateHex;
+  if (getContrastRatio(bg, fg) >= 4.5) return { bg, fg };
+
+  const darkOption = "#1E1418";
+  const lightOption = "#FFFDFD";
+  const cRatioDark = getContrastRatio(candidateHex, darkOption);
+  const cRatioLight = getContrastRatio(candidateHex, lightOption);
+
+  if (role === "bg") {
+    return cRatioDark >= cRatioLight
+      ? { bg: candidateHex, fg: darkOption }
+      : { bg: candidateHex, fg: lightOption };
+  }
+  return cRatioDark >= cRatioLight
+    ? { bg: lightOption, fg: darkOption }
+    : { bg: darkOption, fg: lightOption };
+}
+
+function renderDynamicSuggestions(bgHexCode, textHexCode) {
+  if (!suggestionsList) return;
+
+  suggestionsList.querySelectorAll(".suggestion-item").forEach((el) => el.remove());
+  suggestionsList.innerHTML = "";
+
+  const pickedHex = activeTarget === "bg" ? bgHexCode : textHexCode;
+  const otherHex = activeTarget === "bg" ? textHexCode : bgHexCode;
+  const pickedRgb = hexToRgb(pickedHex);
+  const pickedHsb = rgbToHsb(pickedRgb.r, pickedRgb.g, pickedRgb.b);
+
+  const otherRgb = hexToRgb(otherHex);
+  const otherHsb = rgbToHsb(otherRgb.r, otherRgb.g, otherRgb.b);
+  const baseHue = pickedHsb.s > 4 ? pickedHsb.h : (otherHsb.s > 4 ? otherHsb.h : 342);
+  const baseSat = pickedHsb.s > 4 ? pickedHsb.s : (otherHsb.s > 4 ? otherHsb.s : 65);
+
+  const softTintHex = hsbToHex(baseHue, Math.min(20, Math.max(8, Math.round(baseSat * 0.25))), 98);
+  const deepShadeHex = hsbToHex(baseHue, Math.min(85, Math.max(55, baseSat)), 22);
+  const analogHex = hsbToHex((baseHue + 36) % 360, Math.min(78, Math.max(42, baseSat)), 72);
+
+  const suggestions = [
+    {
+      hex: softTintHex,
+      label: "Soft tint",
+      pair: getBestReadablePair(softTintHex, pickedHex, "bg")
+    },
+    {
+      hex: deepShadeHex,
+      label: "Deep shade",
+      pair: getBestReadablePair(deepShadeHex, otherHex, "text")
+    },
+    {
+      hex: analogHex,
+      label: "Analogous",
+      pair: getBestReadablePair(analogHex, pickedHex, activeTarget)
+    }
+  ];
+
+  suggestions.forEach((s) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "suggestion-item";
+    btn.dataset.bg = s.pair.bg;
+    btn.dataset.text = s.pair.fg;
+    btn.title = `Apply pairing (${s.pair.bg} / ${s.pair.fg})`;
+
+    const chip = document.createElement("span");
+    chip.className = "suggestion-chip";
+    chip.style.background = s.hex;
+
+    const textWrap = document.createElement("span");
+    textWrap.innerHTML = `<strong>${s.hex}</strong><small>${s.label}</small>`;
+
+    btn.appendChild(chip);
+    btn.appendChild(textWrap);
+
+    btn.addEventListener("click", () => {
+      manualHueOverride = null;
+      bgPicker.value = btn.dataset.bg;
+      textPicker.value = btn.dataset.text;
+      updateAnalysis();
+    });
+
+    suggestionsList.appendChild(btn);
+  });
+}
+
 // --- Sync UI ---
 function syncSlidersFromActiveColor() {
   const hex = activeTarget === "bg" ? bgPicker.value : textPicker.value;
   const rgb = hexToRgb(hex);
   const hsb = rgbToHsb(rgb.r, rgb.g, rgb.b);
+  const displayHue = manualHueOverride !== null ? manualHueOverride : hsb.h;
 
-  hueSlider.value = hsb.h;
+  hueSlider.value = displayHue;
   satSlider.value = hsb.s;
   briSlider.value = hsb.b;
 
-  hueVal.textContent = `${hsb.h}°`;
+  hueVal.textContent = `${displayHue}°`;
   satVal.textContent = `${hsb.s}%`;
   briVal.textContent = `${hsb.b}%`;
 
@@ -174,13 +355,15 @@ function syncSlidersFromActiveColor() {
   gVal.textContent = rgb.g;
   bVal.textContent = rgb.b;
 
-  drawColorWheel(hsb.h, hsb.s, hsb.b);
+  drawColorWheel(displayHue, hsb.s, hsb.b);
 }
 
 function updateAnalysis() {
-  const bg = bgPicker.value.toUpperCase();
-  const fg = textPicker.value.toUpperCase();
+  const bg = (normalizeHex(bgPicker.value) || "#FFF0F3");
+  const fg = (normalizeHex(textPicker.value) || "#4A1525");
 
+  bgPicker.value = bg;
+  textPicker.value = fg;
   bgHex.value = bg;
   textHex.value = fg;
   previewBox.style.backgroundColor = bg;
@@ -203,10 +386,13 @@ function updateAnalysis() {
   else wcagHeadlineEl.textContent = "WCAG Contrast Fail";
 
   syncSlidersFromActiveColor();
+  renderDynamicSuggestions(bg, fg);
 }
 
 function applySliderChange() {
-  const rgb = hsbToRgb(Number(hueSlider.value), Number(satSlider.value), Number(briSlider.value));
+  const rawHue = Number(hueSlider.value);
+  manualHueOverride = rawHue;
+  const rgb = hsbToRgb(rawHue, Number(satSlider.value), Number(briSlider.value));
   const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
   if (activeTarget === "bg") bgPicker.value = hex;
   else textPicker.value = hex;
@@ -214,12 +400,14 @@ function applySliderChange() {
 }
 
 bgPicker.addEventListener("input", () => {
+  manualHueOverride = null;
   activeTarget = "bg";
   activeTargetBtn.textContent = "Background selected";
   updateAnalysis();
 });
 
 textPicker.addEventListener("input", () => {
+  manualHueOverride = null;
   activeTarget = "text";
   activeTargetBtn.textContent = "Text color selected";
   updateAnalysis();
@@ -227,17 +415,24 @@ textPicker.addEventListener("input", () => {
 
 bgHex.addEventListener("change", () => {
   const valid = normalizeHex(bgHex.value);
-  if (valid) bgPicker.value = valid;
+  if (valid) {
+    manualHueOverride = null;
+    bgPicker.value = valid;
+  }
   updateAnalysis();
 });
 
 textHex.addEventListener("change", () => {
   const valid = normalizeHex(textHex.value);
-  if (valid) textPicker.value = valid;
+  if (valid) {
+    manualHueOverride = null;
+    textPicker.value = valid;
+  }
   updateAnalysis();
 });
 
 swapBtn.addEventListener("click", () => {
+  manualHueOverride = null;
   const temp = bgPicker.value;
   bgPicker.value = textPicker.value;
   textPicker.value = temp;
@@ -245,42 +440,14 @@ swapBtn.addEventListener("click", () => {
 });
 
 activeTargetBtn.addEventListener("click", () => {
+  manualHueOverride = null;
   activeTarget = activeTarget === "text" ? "bg" : "text";
   activeTargetBtn.textContent = activeTarget === "text" ? "Text color selected" : "Background selected";
   syncSlidersFromActiveColor();
+  renderDynamicSuggestions(bgPicker.value.toUpperCase(), textPicker.value.toUpperCase());
 });
 
 [hueSlider, satSlider, briSlider].forEach((s) => s.addEventListener("input", applySliderChange));
-
-savedSwatches.addEventListener("click", (e) => {
-  const dot = e.target.closest(".swatch-dot");
-  if (!dot) return;
-  document.querySelectorAll(".swatch-dot").forEach((d) => d.classList.remove("active"));
-  dot.classList.add("active");
-  if (activeTarget === "bg") bgPicker.value = dot.dataset.color;
-  else textPicker.value = dot.dataset.color;
-  updateAnalysis();
-});
-
-addSwatchBtn.addEventListener("click", () => {
-  const hex = (activeTarget === "bg" ? bgPicker.value : textPicker.value).toUpperCase();
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "swatch-dot";
-  btn.style.background = hex;
-  btn.dataset.color = hex;
-  btn.title = hex;
-  savedSwatches.insertBefore(btn, addSwatchBtn);
-  savedCount.textContent = `${savedSwatches.querySelectorAll(".swatch-dot").length} colors`;
-});
-
-document.querySelectorAll(".suggestion-item").forEach((item) => {
-  item.addEventListener("click", () => {
-    bgPicker.value = item.dataset.bg;
-    textPicker.value = item.dataset.text;
-    updateAnalysis();
-  });
-});
 
 function showToast(msg) {
   toast.textContent = msg;
@@ -298,7 +465,7 @@ copyCssBtn.addEventListener("click", async () => {
   }
 });
 
-// --- 5-Step Interactive Tutorial (Document-Anchored per Figma Mockups) ---
+// --- 5-Step Interactive Tutorial from my Figma Mockups ---
 const tutorialCard = document.getElementById("tutorialCard");
 const tutorialBackdrop = document.getElementById("tutorialBackdrop");
 const tutStepLabel = document.getElementById("tutStepLabel");
@@ -405,11 +572,13 @@ function renderTutorialStep(index) {
     tutorialCard.classList.add(step.arrowClass);
   }
 
+  const isLastStep = index === tutorialSteps.length - 1;
   tutStepLabel.textContent = `STEP ${index + 1}`;
   tutCountLabel.textContent = `${index + 1} out of ${tutorialSteps.length}`;
   tutTitle.textContent = step.title;
   tutDesc.textContent = step.desc;
-  tutNextBtn.textContent = index === tutorialSteps.length - 1 ? "DONE" : "NEXT >";
+  tutSkipBtn.hidden = isLastStep;
+  tutNextBtn.textContent = isLastStep ? "DONE" : "NEXT >";
 
   tutorialCard.hidden = false;
   positionCalloutOnPage(targetEl, step.placement);
@@ -446,4 +615,5 @@ window.addEventListener("resize", () => {
 });
 
 tutorialCard.hidden = true;
+initDefaultSwatches();
 updateAnalysis();
