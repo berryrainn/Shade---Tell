@@ -29,9 +29,11 @@ const toast = document.getElementById("toast");
 const savedSwatches = document.getElementById("savedSwatches");
 const savedCount = document.getElementById("savedCount");
 const addSwatchBtn = document.getElementById("addSwatchBtn");
+const clearSwatchesBtn = document.getElementById("clearSwatchesBtn");
 const suggestionsList = document.getElementById("suggestionsList") || document.querySelector(".suggestions-list");
 
-let activeTarget = "text"; // "bg" or "text"
+let activeTarget = "text"; 
+let manualHueOverride = null; 
 
 // --- Color Conversions ---
 function normalizeHex(value) {
@@ -65,7 +67,7 @@ function rgbToHsb(r, g, b) {
 }
 
 function hsbToRgb(h, s, b) {
-  h = ((h % 360) + 360) % 360;
+  h = h === 360 ? 360 : ((h % 360) + 360) % 360;
   s = Math.max(0, Math.min(100, s)) / 100;
   b = Math.max(0, Math.min(100, b)) / 100;
   const k = (n) => (n + h / 60) % 6;
@@ -145,6 +147,7 @@ wheelCanvas.addEventListener("click", (e) => {
   if (dist >= innerR && dist <= outerR) {
     let angle = Math.round((Math.atan2(y, x) * 180) / Math.PI);
     if (angle < 0) angle += 360;
+    manualHueOverride = angle;
     hueSlider.value = angle;
     applySliderChange();
   }
@@ -165,7 +168,7 @@ function getContrastRatio(hex1, hex2) {
   return (Math.max(lum1, lum2) + 0.05) / (Math.min(lum1, lum2) + 0.05);
 }
 
-// --- Saved Swatches (With Delete Button) ---
+// --- Saved Swatches (With Individual Delete + Clear All) ---
 function updateSavedCount() {
   const count = savedSwatches.querySelectorAll(".swatch-dot").length;
   savedCount.textContent = `${count} ${count === 1 ? "color" : "colors"}`;
@@ -206,7 +209,7 @@ function initDefaultSwatches() {
     { hex: "#DCD8EC", active: false }
   ];
 
-  savedSwatches.querySelectorAll(".swatch-item").forEach((el) => el.remove());
+  savedSwatches.querySelectorAll(".swatch-item, .swatch-dot").forEach((el) => el.remove());
   defaults.forEach(({ hex, active }) => {
     savedSwatches.insertBefore(createSwatchItem(hex, active), addSwatchBtn);
   });
@@ -226,6 +229,7 @@ savedSwatches.addEventListener("click", (e) => {
   if (!dot) return;
   document.querySelectorAll(".swatch-dot").forEach((d) => d.classList.remove("active"));
   dot.classList.add("active");
+  manualHueOverride = null;
   if (activeTarget === "bg") bgPicker.value = dot.dataset.color;
   else textPicker.value = dot.dataset.color;
   updateAnalysis();
@@ -236,6 +240,13 @@ addSwatchBtn.addEventListener("click", () => {
   savedSwatches.insertBefore(createSwatchItem(hex, false), addSwatchBtn);
   updateSavedCount();
 });
+
+if (clearSwatchesBtn) {
+  clearSwatchesBtn.addEventListener("click", () => {
+    savedSwatches.querySelectorAll(".swatch-item, .swatch-dot").forEach((el) => el.remove());
+    updateSavedCount();
+  });
+}
 
 // --- Dynamic Color Palette Suggestions Based on User's Pick ---
 function getBestReadablePair(candidateHex, anchorHex, role) {
@@ -315,6 +326,7 @@ function renderDynamicSuggestions(bgHexCode, textHexCode) {
     btn.appendChild(textWrap);
 
     btn.addEventListener("click", () => {
+      manualHueOverride = null;
       bgPicker.value = btn.dataset.bg;
       textPicker.value = btn.dataset.text;
       updateAnalysis();
@@ -329,12 +341,13 @@ function syncSlidersFromActiveColor() {
   const hex = activeTarget === "bg" ? bgPicker.value : textPicker.value;
   const rgb = hexToRgb(hex);
   const hsb = rgbToHsb(rgb.r, rgb.g, rgb.b);
+  const displayHue = manualHueOverride !== null ? manualHueOverride : hsb.h;
 
-  hueSlider.value = hsb.h;
+  hueSlider.value = displayHue;
   satSlider.value = hsb.s;
   briSlider.value = hsb.b;
 
-  hueVal.textContent = `${hsb.h}°`;
+  hueVal.textContent = `${displayHue}°`;
   satVal.textContent = `${hsb.s}%`;
   briVal.textContent = `${hsb.b}%`;
 
@@ -342,7 +355,7 @@ function syncSlidersFromActiveColor() {
   gVal.textContent = rgb.g;
   bVal.textContent = rgb.b;
 
-  drawColorWheel(hsb.h, hsb.s, hsb.b);
+  drawColorWheel(displayHue, hsb.s, hsb.b);
 }
 
 function updateAnalysis() {
@@ -377,7 +390,9 @@ function updateAnalysis() {
 }
 
 function applySliderChange() {
-  const rgb = hsbToRgb(Number(hueSlider.value), Number(satSlider.value), Number(briSlider.value));
+  const rawHue = Number(hueSlider.value);
+  manualHueOverride = rawHue;
+  const rgb = hsbToRgb(rawHue, Number(satSlider.value), Number(briSlider.value));
   const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
   if (activeTarget === "bg") bgPicker.value = hex;
   else textPicker.value = hex;
@@ -385,12 +400,14 @@ function applySliderChange() {
 }
 
 bgPicker.addEventListener("input", () => {
+  manualHueOverride = null;
   activeTarget = "bg";
   activeTargetBtn.textContent = "Background selected";
   updateAnalysis();
 });
 
 textPicker.addEventListener("input", () => {
+  manualHueOverride = null;
   activeTarget = "text";
   activeTargetBtn.textContent = "Text color selected";
   updateAnalysis();
@@ -398,17 +415,24 @@ textPicker.addEventListener("input", () => {
 
 bgHex.addEventListener("change", () => {
   const valid = normalizeHex(bgHex.value);
-  if (valid) bgPicker.value = valid;
+  if (valid) {
+    manualHueOverride = null;
+    bgPicker.value = valid;
+  }
   updateAnalysis();
 });
 
 textHex.addEventListener("change", () => {
   const valid = normalizeHex(textHex.value);
-  if (valid) textPicker.value = valid;
+  if (valid) {
+    manualHueOverride = null;
+    textPicker.value = valid;
+  }
   updateAnalysis();
 });
 
 swapBtn.addEventListener("click", () => {
+  manualHueOverride = null;
   const temp = bgPicker.value;
   bgPicker.value = textPicker.value;
   textPicker.value = temp;
@@ -416,6 +440,7 @@ swapBtn.addEventListener("click", () => {
 });
 
 activeTargetBtn.addEventListener("click", () => {
+  manualHueOverride = null;
   activeTarget = activeTarget === "text" ? "bg" : "text";
   activeTargetBtn.textContent = activeTarget === "text" ? "Text color selected" : "Background selected";
   syncSlidersFromActiveColor();
@@ -440,7 +465,7 @@ copyCssBtn.addEventListener("click", async () => {
   }
 });
 
-// --- 5-Step Interactive Tutorial (Document-Anchored per Figma Mockups) ---
+// --- 5-Step Interactive Tutorial from my Figma Mockups ---
 const tutorialCard = document.getElementById("tutorialCard");
 const tutorialBackdrop = document.getElementById("tutorialBackdrop");
 const tutStepLabel = document.getElementById("tutStepLabel");
@@ -547,11 +572,13 @@ function renderTutorialStep(index) {
     tutorialCard.classList.add(step.arrowClass);
   }
 
+  const isLastStep = index === tutorialSteps.length - 1;
   tutStepLabel.textContent = `STEP ${index + 1}`;
   tutCountLabel.textContent = `${index + 1} out of ${tutorialSteps.length}`;
   tutTitle.textContent = step.title;
   tutDesc.textContent = step.desc;
-  tutNextBtn.textContent = index === tutorialSteps.length - 1 ? "DONE" : "NEXT >";
+  tutSkipBtn.hidden = isLastStep;
+  tutNextBtn.textContent = isLastStep ? "DONE" : "NEXT >";
 
   tutorialCard.hidden = false;
   positionCalloutOnPage(targetEl, step.placement);

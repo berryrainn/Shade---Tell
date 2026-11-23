@@ -537,7 +537,7 @@ body {
 
 .footer a { color: var(--text-muted); }
 
-/* Tutorial Overlay & Document-Anchored Speech Bubble */
+/* Tutorial Overlay & Speech Bubble */
 .tutorial-backdrop {
   position: fixed;
   inset: 0;
