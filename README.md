@@ -1,4 +1,4 @@
-# Shade & Tell: Color Palette & Contrast Checker
+# Shade & Tell: Color Palette and Contrast Checker
 
 A lightweight web application built with HTML5, CSS3, and JavaScript that evaluates foreground and background color pairings against **ISO/IEC 40500 (WCAG 2.2)** contrast thresholds (`4.5:1` AA and `7.0:1` AAA) and exports `:root` CSS custom properties.
 
